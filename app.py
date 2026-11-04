@@ -1,5 +1,5 @@
 
-import os
+import os, base64, json, requests
 import streamlit as st
 from openai import OpenAI
 
@@ -7,49 +7,61 @@ from openai import OpenAI
 client = OpenAI()
 
 # 페이지 설정
-st.set_page_config(page_title="     ", page_icon="  ")
-st.title("     ")
-st.write("     ")
+st.set_page_config(page_title="음성 AI 서비스", page_icon="🤖", layout="wide")
+st.title("음성 인식 AI 서비스")
+st.write("음성으로 질문하시면 답변해 드립니다.")
 
-# 사용자 입력(텍스트)
-korean_text = st.text_area(
-    "번역할 한글 문장을 입력하세요.",
-    height=150,
-    placeholder="예: 인공지능은 우리의 일상과 업무 방식을 빠르게 변화시키고 있습니다."
-)
+# 역할 지정
+sys_role = """
+당신은 다양한 업무를 처리하는 AI 서비스입니다.
+개인 비서처럼 친절하게 응대합니다.
+"""
 
-# 번역 버튼
-if st.button("     "):
+# 상태 초기화
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-    if not korean_text.strip():
-        st.warning("     ")
-    else:
-        with st.spinner("번역 중입니다..."):
+# 지시 영역
+with st.form("task_form"):
+    uploaded_file = st.file_uploader("텍스트 파일 업로드", type=["txt"])
+    audio_value = st.audio_input("무엇을 도와드릴까요?")
+    submit = st.form_submit_button("실행")
 
-            # 시스템 역할
-            sys_role = """
+# 버튼을 눌렀을 때만 실행
+if submit:
+    # 업로드 된 파일이 있으면 디코딩
+    text = ""
+    if uploaded_file is not None:
+        text = uploaded_file.read().decode("utf-8")
 
+    # 녹음이 없으면 녹음 요청
+    if audio_value is None:
+        st.warning("음성을 녹음해주세요.")
+        st.stop()
 
-            """
+    # 시스템 메세지
+    system_content = sys_role
+    if text:
+        system_content += f"\n\n다음 내용을 참고하세요:\n{text}"
+    input_messages = [{"role": "system", "content": system_content}]
 
-            # 프롬프트 구성
-            prompt = f"""
-            다음 문장을 영어로 번역하세요.
-            TEXT:
-            {korean_text}
-            """
+    # STT: 음성 → 텍스트
+    transcript = client.audio.transcriptions.create(
+        model="whisper-1",
+        file=("audio.wav", audio_value, "audio/wav"))
 
-            # GPT 호출
-            response = client.responses.create(
-                model="gpt-4o-mini",
-                input=[
-                    {"role": "system", "content":    },
-                    {"role": "user", "content":    }
-                ]
-            )
+    # 사용자 메시지
+    input_messages.append({"role": "user", "content": transcript.text})
 
-            # 결과 출력
-            translated_text =
+    # LLM 호출 및 응답 듣기
+    with st.spinner("답변을 준비하고 있습니다..."):
+        # LLM 호출
+        response = client.responses.create(
+            model="gpt-4o-mini",
+            input=input_messages
+        )
+        answer = response.output_text
 
-            st.subheader("     ")
-            st.success(     )
+        # 응답 출력
+        st.subheader("AI 답변")
+        st.write(answer)
