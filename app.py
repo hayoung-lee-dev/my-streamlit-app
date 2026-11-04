@@ -749,7 +749,6 @@ if selected_page == PAGES[1]:
 
 if selected_page == PAGES[2]:
     st.subheader("음성 명령과 회의록 분석")
-    st.caption("TXT 회의록 + 음성 입력 또는 텍스트 질문 · 음성 인식 결과 확인")
     uploaded=st.file_uploader("회의록 TXT 업로드",type=["txt"],key="meeting_txt")
     if uploaded is not None:
         content=extract_txt(uploaded)
