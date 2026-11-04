@@ -1,7 +1,3 @@
-"""AIVLE AI assistant: Streamlit day-2 prototype.
-Run: streamlit run app.py
-Secrets: OPENAI_API_KEY, optionally GMAIL_ADDRESS and GMAIL_APP_PASSWORD.
-"""
 import io
 import uuid
 from html import escape
@@ -39,7 +35,6 @@ if not (os.getenv("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY", None)):
     st.error("OPENAI_API_KEY를 Streamlit Secrets 또는 환경 변수에 등록하세요.")
     st.stop()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY") or st.secrets["OPENAI_API_KEY"])
-
 SYS_ROLE = """당신은 마케팅 데이터 분석가 김 대리의 AI 개인비서 '에이블'입니다.
 김 대리는 잦은 외부 미팅과 여러 분석 업무를 병행합니다.
 회의록을 근거로 핵심 결정사항과 김 대리의 담당 업무를 빠르게 파악하도록 돕습니다.
@@ -50,12 +45,10 @@ SYS_ROLE = """당신은 마케팅 데이터 분석가 김 대리의 AI 개인비
 
 for key, default in {
     "messages": [], "document": "", "tasks": [], "events": [],
-    "last_answer": "", "last_transcript": "", "last_audio": None, "pending_events": [], "mail_draft": None, "doc_name": ""
+    "last_answer": "", "last_transcript": "", "last_audio": None, "pending_events": [], "mail_draft": None, "doc_name": "", "mail_to": "", "mail_subject": "에이블 AI 비서 업무 요약", "mail_body": ""
 }.items():
     if key not in st.session_state:
         st.session_state[key] = default
-
-
 def extract_txt(uploaded):
     if uploaded is None:
         return ""
@@ -78,6 +71,9 @@ def ask_ai(question, document=""):
         try:
             args = json.loads(calls[0].arguments)
             st.session_state.mail_draft = args
+            st.session_state.mail_to = args.get("to", "")
+            st.session_state.mail_subject = args.get("subject", "에이블 AI 비서 업무 요약")
+            st.session_state.mail_body = args.get("body", "")
             answer = "이메일 발송 요청을 확인했습니다. '이메일' 탭에서 수신자와 본문을 검토한 후 발송을 승인해주세요."
         except (ValueError, KeyError, TypeError):
             answer = "메일 초안을 읽는 데 실패했습니다. 이메일 탭에서 직접 작성해주세요."
@@ -129,8 +125,6 @@ EVENT_SCHEMA = {
             "required":["title","date","start","end"],"additionalProperties":False}}},
             "required":["events"],"additionalProperties":False}
 }
-
-
 def structured_ai(instruction, document, schema):
     result = client.responses.create(
         model="gpt-4o-mini",
@@ -156,8 +150,6 @@ def extract_events(document, meeting_day):
         for k in ("date","start","end"):
             r[k] = r.get(k) or ""
     return rows
-
-
 def priority_score(task):
     # 중요도(1~5) + 긴급도(기한 기준)로 사분면, 사분면 내 세부 점수
     try:
@@ -217,8 +209,6 @@ def conflicts(events):
                     found.append((a["title"],b["title"],a["date"]))
             except ValueError: continue
     return found
-
-
 def send_email(to, subject, body):
     address = st.secrets.get("GMAIL_ADDRESS", os.getenv("GMAIL_ADDRESS", ""))
     password = st.secrets.get("GMAIL_APP_PASSWORD", os.getenv("GMAIL_APP_PASSWORD", ""))
@@ -232,8 +222,6 @@ def send_email(to, subject, body):
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=20) as smtp:
         smtp.login(address, password)
         smtp.send_message(msg)
-
-
 tab1, tab2, tab3, tab4 = st.tabs(["🎙 AI 비서", "🎯 업무 우선순위", "📅 일정 관리", "✉️ 이메일"])
 
 with st.sidebar:
@@ -301,7 +289,6 @@ with tab1:
     with st.expander(f"대화 히스토리 · 최근 {len(st.session_state.messages)}개 메시지"):
         for msg in st.session_state.messages:
             st.markdown(f"**{'나' if msg['role']=='user' else '에이블'}:** {msg['content']}")
-
 with tab2:
     st.subheader("업무 우선순위 분석")
     st.caption("회의록에서 할 일을 추출하고 중요도를 직접 조정하세요. 마감일이 없는 업무는 긴급하다고 추정하지 않습니다.")
@@ -383,7 +370,6 @@ with tab2:
         st.caption("점수 = 중요도 × 0.6 + 마감 긴급도 × 0.4 (예시 가중치). 마감일 미지정은 긴급도 1로 임시 계산하므로 우선순위 해석 시 주의하세요.")
     else:
         st.info("회의록 업로드 후 '업무 자동 추출'을 실행하면 업무 카드와 4분면이 나타납니다.")
-
 with tab3:
     st.subheader("캘린더 · 일정 충돌 탐지")
     st.caption("Google 캘린더 연동 전 내부 프로토타입입니다. 승인한 일정만 등록하고 .ics 파일로 내보낼 수 있습니다.")
@@ -446,23 +432,48 @@ with tab3:
             st.info("시간 정보가 없는 일정은 정확한 충돌 판정에서 제외했습니다.")
         else:st.success("확인된 시간 충돌 없음")
         st.download_button("📥 캘린더 일정 (.ics)",ics_events(st.session_state.events),"aivle_schedule.ics",mime="text/calendar")
-
 with tab4:
     st.subheader("✉️ 이메일 발송")
-    st.caption("미션 7의 LLM Function Calling 기반 초안 작성 + 사용자 승인 후 실제 발송")
-    if st.session_state.mail_draft:st.info("AI가 메일 초안을 준비했습니다. 내용을 확인해주세요.")
-    draft=st.session_state.mail_draft or {}
-    with st.form("email_form"):
-        receiver=st.text_input("받는 사람 이메일",value=draft.get("to",""))
-        subject=st.text_input("제목",value=draft.get("subject","에이블 AI 비서 업무 요약"))
-        email_body=st.text_area("본문",value=draft.get("body",st.session_state.last_answer),height=220)
-        allow_send=st.checkbox("받는 주소와 메일 본문을 확인했습니다")
-        send=st.form_submit_button("📨 최종 승인 및 발송",disabled=not allow_send)
+    st.caption("LLM이 요청 시 초안을 생성하고, 실제 발송은 사용자가 승인한 후에만 실행합니다.")
+
+    # 자격 정보 존재 여부만 안내 (실제 값은 노출하지 않음)
+    gmail_address = os.getenv("GMAIL_ADDRESS") or st.secrets.get("GMAIL_ADDRESS", "")
+    gmail_password = os.getenv("GMAIL_APP_PASSWORD") or st.secrets.get("GMAIL_APP_PASSWORD", "")
+    if not (gmail_address and gmail_password):
+        st.warning("GMAIL_ADDRESS, GMAIL_APP_PASSWORD를 Streamlit Secrets에 등록해야 실제 발송됩니다.")
+
+    if st.session_state.mail_draft:
+        st.info("AI가 작성한 메일 초안입니다. 주소·제목·본문을 확인하고 승인해주세요.")
+    else:
+        st.caption("AI 비서 탭에서 '이메일로 보내줘'라고 요청하거나 아래 칸에 직접 작성할 수 있습니다.")
+
+    draft = st.session_state.mail_draft or {}
+    if st.button("최근 AI 답변을 본문에 불러오기", key="mail_use_last_answer"):
+        st.session_state.mail_body = st.session_state.last_answer
+    # 폼 위젯은 제출 전까지 재실행되지 않으므로, 확인 여부로 submit을 disabled 처리하면
+    # 체크한 이후에도 버튼이 잠긴 상태로 남음. 버튼은 항상 활성화하고 제출 시 확인 여부 검증.
+    with st.form("email_form_v4", clear_on_submit=False):
+        receiver = st.text_input("받는 사람 이메일", key="mail_to")
+        subject = st.text_input("제목", key="mail_subject")
+        email_body = st.text_area(
+            "본문", height=220, key="mail_body"
+        )
+        allow_send = st.checkbox("수신 주소, 제목, 본문을 확인했으며 발송에 동의합니다.")
+        send = st.form_submit_button("📨 최종 승인 및 발송", type="primary", use_container_width=True)
+
     if send:
-        if not receiver.strip() or "@" not in receiver or not email_body.strip():st.warning("이메일 주소와 본문을 확인해주세요.")
+        if not allow_send:
+            st.warning("먼저 발송 동의 체크박스를 선택해주세요.")
+        elif not receiver.strip() or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", receiver.strip()):
+            st.warning("유효한 수신 이메일 주소를 입력해주세요.")
+        elif not subject.strip() or not email_body.strip():
+            st.warning("이메일 제목과 본문을 입력해주세요.")
         else:
             try:
-                send_email(receiver.strip(),subject,email_body)
-                st.session_state.mail_draft=None
-                st.success("이메일 발송 완료")
-            except Exception as exc:st.error(f"발송 실패: {exc}")
+                with st.spinner("이메일 전송 중..."):
+                    send_email(receiver.strip(), subject.strip(), email_body)
+                st.session_state.mail_draft = None
+                st.success(f"✅ {receiver.strip()} 주소로 이메일 발송을 완료했습니다.")
+            except Exception as exc:
+                st.error(f"❌ 이메일 발송 실패: {exc}")
+                st.info("Secrets의 Gmail 주소·앱 비밀번호, Gmail 계정 권한 및 SMTP 접속을 확인해주세요.")
