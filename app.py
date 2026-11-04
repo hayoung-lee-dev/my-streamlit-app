@@ -15,7 +15,6 @@ from datetime import date, datetime, timedelta, time
 from email.message import EmailMessage
 
 import pandas as pd
-!pip install streamlit 
 import streamlit as st
 from openai import OpenAI
 
