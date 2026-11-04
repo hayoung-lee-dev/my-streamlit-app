@@ -15,6 +15,7 @@ from datetime import date, datetime, timedelta, time
 from email.message import EmailMessage
 
 import pandas as pd
+!pip install streamlit 
 import streamlit as st
 from openai import OpenAI
 
@@ -42,6 +43,147 @@ if not (os.getenv("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY", None)):
     st.stop()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY") or st.secrets["OPENAI_API_KEY"])
 
+# ==========================================
+# 모듈 02. AI 역할 및 세션 상태 초기화
+# ==========================================
+
+import streamlit as st
+from datetime import date
+
+SYS_ROLE = """
+당신은 마케팅 데이터 분석가 김 대리의 AI 개인비서 '에이블'입니다.
+김 대리는 잦은 외부 미팅과 여러 분석 업무를 병행합니다.
+회의록을 근거로 핵심 결정사항과 김 대리의 담당 업무를 빠르게 파악하도록 돕습니다.
+추측하지 말고, 원문에 없는 담당자·날짜·중요도는 '확인 필요'라고 말합니다.
+사용자가 다른 이름을 지정하면 그 사용자를 위한 비서로 동작합니다.
+답변은 명확한 한국어로 간결하게 작성합니다.
+"""
+
+def initialize_session_state():
+    defaults = {
+        "messages": [],
+        "document": "",
+        "doc_name": "",
+        "tasks": [],
+        "events": [],
+        "pending_events": [],
+        "last_answer": "",
+        "last_transcript": "",
+        "last_audio": None,
+        "calendar_cursor": date.today().replace(day=1).isoformat(),
+        "calendar_revision": 0,
+        "mail_draft": None,
+        "mail_to": "",
+        "mail_subject": "에이블 AI 비서 업무 요약",
+        "mail_body": "",
+    }
+
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
+initialize_session_state()
+def extract_txt(uploaded):
+    if uploaded is None:
+        return ""
+    return uploaded.getvalue().decode("utf-8-sig", errors="replace")
+
+
+def ask_ai(question, document=""):
+    system = SYS_ROLE
+    if document:
+        system += "\n\n[업로드한 회의록]\n" + document[:75000]
+    # 최근 10개 사용자/비서 메시지만 모델에 전달
+    history = st.session_state.messages[-10:]
+    items = [{"role": "system", "content": system}]
+    items += history
+    items += [{"role": "user", "content": question}]
+    result = client.responses.create(model="gpt-4o-mini", input=items, tools=[EMAIL_TOOL], tool_choice="auto")
+    # 어제 실습 미션 7: LLM이 send_email을 선택하면 실제 발송하지 않고 초안 확인 단계로 연결
+    calls = [x for x in result.output if x.type == "function_call" and x.name == "send_email"]
+    if calls:
+        try:
+            args = json.loads(calls[0].arguments)
+            st.session_state.mail_draft = args
+            st.session_state.mail_to = args.get("to", "")
+            st.session_state.mail_subject = args.get("subject", "에이블 AI 비서 업무 요약")
+            st.session_state.mail_body = args.get("body", "")
+            answer = "이메일 발송 요청을 확인했습니다. '이메일' 탭에서 수신자와 본문을 검토한 후 발송을 승인해주세요."
+        except (ValueError, KeyError, TypeError):
+            answer = "메일 초안을 읽는 데 실패했습니다. 이메일 탭에서 직접 작성해주세요."
+    else:
+        answer = result.output_text
+    st.session_state.messages = (history + [
+        {"role": "user", "content": question},
+        {"role": "assistant", "content": answer}
+    ])[-10:]
+    st.session_state.last_answer = answer
+    return answer
+
+
+def make_speech(text):
+    # OpenAI SDK 3.x: 생성된 음성 바이너리를 읽어 st.audio에 전달
+    speech = client.audio.speech.create(model="gpt-4o-mini-tts", voice="nova", input=text[:4000])
+    return speech.content
+
+
+# 어제 실습 미션 7: 도구 스키마. 도구 호출 자체는 발송 승인 요청으로 처리.
+EMAIL_TOOL = {
+    "type": "function", "name": "send_email",
+    "description": "사용자가 명시적으로 이메일 발송을 요청했을 때만 메일 초안을 준비합니다. 최종 전송은 사용자가 화면에서 승인합니다.",
+    "parameters": {"type": "object", "properties": {
+        "to": {"type": "string", "description": "수신 이메일 주소"},
+        "subject": {"type": "string", "description": "메일 제목"},
+        "body": {"type": "string", "description": "메일 본문, 별표 서식 금지"}},
+        "required": ["to", "subject", "body"], "additionalProperties": False},
+    "strict": True
+}
+
+# 어제 음성 메모 → 할 일 목록 예제의 JSON Schema를 확장
+TASK_SCHEMA = {
+    "type":"json_schema", "name":"meeting_tasks", "strict":True,
+    "schema":{"type":"object","properties":{"tasks":{
+        "type":"array","items":{"type":"object","properties":{
+            "task":{"type":"string"}, "owner":{"type":"string"},
+            "due":{"type":["string","null"]}, "importance":{"type":"integer"},
+            "evidence":{"type":"string"}},
+            "required":["task","owner","due","importance","evidence"],
+            "additionalProperties":False}}},"required":["tasks"],"additionalProperties":False}
+}
+EVENT_SCHEMA = {
+    "type":"json_schema","name":"meeting_events","strict":True,
+    "schema":{"type":"object","properties":{"events":{
+        "type":"array","items":{"type":"object","properties":{
+            "title":{"type":"string"},"date":{"type":["string","null"]},
+            "start":{"type":["string","null"]},"end":{"type":["string","null"]}},
+            "required":["title","date","start","end"],"additionalProperties":False}}},
+            "required":["events"],"additionalProperties":False}
+}
+def structured_ai(instruction, document, schema):
+    result = client.responses.create(
+        model="gpt-4o-mini",
+        input=[{"role":"system","content":"당신은 김 대리의 AI 비서 에이블입니다. 원문에 없는 일정·업무·날짜·중요도를 지어내지 마세요. 마감일이 없으면 null, 중요도 근거가 없으면 3으로 표시하세요."},
+               {"role":"user","content":instruction+"\n\n[회의록]\n"+document[:70000]}],
+        text={"format":schema})
+    return json.loads(result.output_text)
+
+
+def extract_tasks(document, meeting_day):
+    prompt = f"회의 날짜는 {meeting_day.isoformat()}입니다. 문서에서 명시적으로 할당한 업무만 빠짐없이 추출하세요. due는 YYYY-MM-DD 형식, 불확실하면 null. 상대 날짜는 회의일 기준으로 해석하되 모호하면 null. 중요도는 원문에서 명시적 근거가 없으면 3. evidence는 원문에서 해당 지시를 뒷받침하는 짧은 구절."
+    rows = structured_ai(prompt, document, TASK_SCHEMA).get("tasks", [])
+    for r in rows:
+        r["due"] = r.get("due") or ""
+        r["importance"] = max(1,min(5,int(r.get("importance",3))))
+    return rows
+
+
+def extract_events(document, meeting_day):
+    prompt = f"회의 날짜 {meeting_day.isoformat()} 기준으로 명시된 회의·일정·마감일만 추출. 날짜는 YYYY-MM-DD, 불명확하면 null. 시간이 명시되어 있다면 start/end는 HH:MM 형식, 미명시되면 null. 종료 시간이 없으면 null. 임의 시간을 설정하지 마세요."
+    rows=structured_ai(prompt, document, EVENT_SCHEMA).get("events", [])
+    for r in rows:
+        for k in ("date","start","end"):
+            r[k] = r.get(k) or ""
+    return rows
 def priority_score(task):
     # 중요도(1~5) + 긴급도(기한 기준)로 사분면, 사분면 내 세부 점수
     try:
@@ -353,6 +495,87 @@ with tab1:
         for msg in st.session_state.messages:
             st.markdown(f"**{'나' if msg['role']=='user' else '에이블'}:** {msg['content']}")
 
+with tab2:
+    st.subheader("업무 우선순위 분석")
+    st.caption("회의록에서 할 일을 추출하고 중요도를 직접 조정하세요. 마감일이 없는 업무는 긴급하다고 추정하지 않습니다.")
+    meeting_date=st.date_input("회의 기준일",value=date.today(),key="task_meeting_date")
+    if st.button("✨ 회의록에서 업무 자동 추출",type="primary"):
+        if not st.session_state.document:
+            st.warning("먼저 AI 비서 탭에서 회의록을 업로드해주세요.")
+        else:
+            try:
+                with st.spinner("담당자·업무·기한을 추출하고 있습니다..."):
+                    st.session_state.tasks=extract_tasks(st.session_state.document,meeting_date)
+            except Exception as exc:
+                st.error(f"업무 추출 실패: {exc}")
+    if st.session_state.tasks:
+        tasks=st.session_state.tasks
+        missing=sum(not str(x.get("due") or "").strip() for x in tasks)
+        scored=[(t,*priority_score(t)) for t in tasks]
+        top=sorted(scored,key=lambda x:x[2],reverse=True)
+        high=sum(q=="긴급·중요" for _,q,_,_ in scored)
+        st.markdown("#### 한눈에 보는 내 업무")
+        metric_cols=st.columns(4)
+        for col,num,label in zip(metric_cols,[len(tasks),high,missing,len({str(t.get('owner','')) for t in tasks if t.get('owner')})],["추출 업무","긴급·중요","마감일 미확인","담당자 수"]):
+            with col:
+                st.markdown(f'<div class="metric-shell"><div class="big">{num}</div><div class="small">{label}</div></div>',unsafe_allow_html=True)
+        st.markdown("#### 🏅 먼저 확인할 업무 TOP 3")
+        for rank,(t,q,score,days) in enumerate(top[:3],start=1):
+            with st.container(border=True):
+                a,b=st.columns([5,1])
+                with a:
+                    st.markdown(f"**{rank}. {t.get('task','')}**")
+                    st.caption(f"담당: {t.get('owner','확인 필요')}  ·  기한: {t.get('due') or '확인 필요'}  ·  분류: {q}")
+                with b:
+                    st.metric("우선점수",f"{score:.1f} / 5")
+        st.markdown("#### 🧭 아이젠하워 매트릭스")
+        st.caption("가로: 중요도 · 세로: 긴급도 / 각 사분면의 업무를 카드로 표시합니다.")
+        qs=[("긴급·중요","1사분면 · 즉시 실행","#d64545"),("비긴급·중요","2사분면 · 계획 수립","#2478ba"),("긴급·비중요","3사분면 · 위임 검토","#c27b17"),("비긴급·비중요","4사분면 · 보류 검토","#718096")]
+        for offset in [0,2]:
+            cols=st.columns(2,gap="medium")
+            for col,(q,hint,accent) in zip(cols,qs[offset:offset+2]):
+                with col:
+                    subset=[(t,s,d) for t,c,s,d in scored if c==q]
+                    items="".join(
+                        f'<div class="qitem"><strong>{escape(str(t.get("task","")))}</strong><br><small>👤 {escape(str(t.get("owner","확인 필요")))} · 📅 {escape(str(t.get("due") or "미지정"))} · 점수 {s:.1f}</small></div>'
+                        for t,s,d in sorted(subset,key=lambda x:x[1],reverse=True))
+                    if not items: items='<div class="qitem">해당 업무 없음</div>'
+                    st.markdown(f'<div class="qbox" style="border-top:5px solid {accent}"><div class="qhead">{escape(q)} <span style="color:{accent}">({len(subset)})</span></div><div class="qhint">{escape(hint)}</div>{items}</div>',unsafe_allow_html=True)
+        st.markdown("#### ✍️ 업무 정보 수정")
+        st.caption("중요도 1~5와 마감일을 수정하면 우선순위 결과에 반영됩니다. 날짜는 YYYY-MM-DD 형식으로 입력하세요.")
+        f=pd.DataFrame(tasks)
+        for c in ["task","owner","due","importance","evidence"]:
+            if c not in f:f[c]=""
+        edit=st.data_editor(f[["task","owner","due","importance","evidence"]],hide_index=True,use_container_width=True,num_rows="dynamic",key="task_editor",
+           column_config={"task":st.column_config.TextColumn("업무",width="large"),"owner":st.column_config.TextColumn("담당자"),"due":st.column_config.TextColumn("마감일 YYYY-MM-DD"),"importance":st.column_config.NumberColumn("중요도 1~5",min_value=1,max_value=5,step=1),"evidence":st.column_config.TextColumn("원문 근거",width="large")})
+        if st.button("💾 수정사항 반영",use_container_width=True):
+            clean=[]
+            invalid=[]
+            for i,t in enumerate(edit.fillna("").to_dict("records"),1):
+                if not str(t.get("task","")).strip():continue
+                due=str(t.get("due","")).strip()
+                if due:
+                    try:date.fromisoformat(due)
+                    except ValueError:invalid.append(i)
+                try:t["importance"]=max(1,min(5,int(t.get("importance") or 3)))
+                except (ValueError,TypeError):t["importance"]=3
+                clean.append(t)
+            if invalid:st.error(f"마감일 형식을 확인하세요. 행 번호: {invalid}")
+            else:
+                st.session_state.tasks=clean
+                st.success("수정사항을 반영했습니다.")
+                st.rerun()
+        table=[]
+        for t in tasks:
+            q,score,days=priority_score(t)
+            table.append({"업무":t.get("task",""),"담당자":t.get("owner",""),"마감일":t.get("due",""),"중요도":t.get("importance",3),"분류":q,"우선점수":score,"D-day":("D"+str(days) if days is not None else "미지정")})
+        df=pd.DataFrame(table).sort_values("우선점수",ascending=False)
+        with st.expander("📋 우선순위 전체 순위표",expanded=False):
+            st.dataframe(df,hide_index=True,use_container_width=True)
+        st.download_button("⬇️ 업무 현황 CSV 다운로드",df.to_csv(index=False).encode("utf-8-sig"),"aivle_tasks.csv",mime="text/csv")
+        st.caption("점수 = 중요도 × 0.6 + 마감 긴급도 × 0.4 (예시 가중치). 마감일 미지정은 긴급도 1로 임시 계산하므로 우선순위 해석 시 주의하세요.")
+    else:
+        st.info("회의록 업로드 후 '업무 자동 추출'을 실행하면 업무 카드와 4분면이 나타납니다.")
 with tab3:
     st.subheader("📅 확정 일정 캘린더")
     st.caption("회의록 일정 승인 + 업무 마감일 반영 + 충돌 탐지 / 외부 Google Calendar 연동 없음")
