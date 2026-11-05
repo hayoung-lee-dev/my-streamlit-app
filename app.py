@@ -20,23 +20,187 @@ import pandas as pd
 import streamlit as st
 from openai import OpenAI
 
-st.set_page_config(page_title="에이블 | AI 업무비서", page_icon="🤖", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="에이블 | AI 업무비서", page_icon="🤖", layout="wide", initial_sidebar_state="expanded")
+st.markdown("<style>" + '\n/* ABLE UI v3: common legibility and compact calendar; functional logic unchanged */\n.stApp {font-size:16px!important;}\n.stApp p,.stApp label,.stApp li,.stApp [data-testid="stMarkdownContainer"] {line-height:1.6;}\n.stApp [data-testid="stCaptionContainer"] p {color:#c9cbe1!important;font-size:.91rem!important;}\n.stApp [data-testid="stWidgetLabel"] p,.stApp label p {color:#f6f3ff!important;font-weight:600!important;}\n.stApp [data-testid="stNotification"] p,.stApp [data-testid="stAlert"] p {color:#f7f4ff!important;}\n.stApp [data-testid="stDataFrame"],.stApp [data-testid="stDataEditor"] {color:#f6f4ff!important;}\n.stApp [data-testid="stDateInput"] input,.stApp [data-testid="stTextInput"] input,.stApp textarea {background:#34395e!important;color:#fff!important;border:1px solid #7b78a8!important;}\n.stApp button,.stApp a[data-testid="stLinkButton"] {background:#39365f!important;color:#fff!important;border:1px solid #8377b4!important;}\n.stApp button *, .stApp a[data-testid="stLinkButton"] * {color:inherit!important;}\n.stApp button:disabled,.stApp button:disabled * {color:#d0cce2!important;opacity:.85!important;}\n.stApp button:hover {background:#52467e!important;border-color:#b49df9!important;}\n/* Month grid: preserve all seven columns, reduce row height without hiding overflowed events */\n.cal-grid {display:grid!important;grid-template-columns:repeat(7,minmax(0,1fr))!important;gap:5px!important;width:100%!important;}\n.cal-week {background:#35365e!important;color:#f3efff!important;padding:7px 2px!important;border:1px solid #55527e!important;border-radius:8px!important;font-size:13px!important;}\n.cal-day {min-height:68px!important;height:auto!important;padding:6px!important;background:#292d4f!important;border:1px solid #545679!important;border-radius:9px!important;overflow:hidden!important;}\n.cal-num {font-size:13px!important;color:#fff!important;margin-bottom:3px!important;}\n.cal-other {opacity:.52!important;}\n.cal-today {outline:2px solid #c0a4ff!important;outline-offset:-2px!important;}\n.cal-chip {font-size:10px!important;line-height:1.3!important;padding:3px 4px!important;margin:2px 0!important;}\n.cal-task {background:#5b422f!important;color:#ffe2ad!important;border-left:3px solid #f3ad4b!important;}\n.cal-meeting {background:#284969!important;color:#d4eeff!important;border-left:3px solid #75bafa!important;}\n.cal-task-soon {background:#6a4a2e!important;color:#ffe9b8!important;border-left:3px solid #ffbc5e!important;}\n.cal-task-overdue {background:#693847!important;color:#ffdce3!important;border-left:3px solid #ff819b!important;}\n.cal-more {color:#d6d0f0!important;}\n.st-key-cal_prev button,.st-key-cal_next button {background:#4b3b7a!important;color:#fff!important;border:1px solid #a58adf!important;min-height:40px!important;}\n.st-key-cal_prev button *, .st-key-cal_next button * {color:#fff!important;}\n@media(max-width:700px){.cal-grid{gap:2px!important}.cal-day{min-height:52px!important;padding:3px!important}.cal-week{font-size:11px!important;padding:5px 0!important}.cal-chip{font-size:9px!important}}\n' + "</style>", unsafe_allow_html=True)
 st.markdown("""<style>
-.block-container{max-width:1250px;padding-top:1.6rem;padding-bottom:3rem}
-.hero{background:linear-gradient(125deg,#17334f,#245e76);border-radius:20px;padding:25px 29px;color:white;margin-bottom:20px}
-.hero h1{font-size:2rem;margin:0;color:white}.hero p{margin:.45rem 0 0;color:#e0f3f9}
-.section-note{color:#64748b;font-size:.88rem}
-.metric-shell{border:1px solid #e2e8f0;border-radius:14px;padding:17px;background:var(--secondary-background-color)}
-.metric-shell .big{font-size:1.65rem;font-weight:800;line-height:1.4}
-.metric-shell .small{font-size:.84rem;opacity:.75}
-.qbox{border:1px solid #d7e0e9;border-radius:15px;padding:18px;min-height:195px;margin:6px 0;background:var(--secondary-background-color)}
-.qhead{font-weight:800;font-size:1.03rem;margin-bottom:5px}
-.qhint{font-size:.78rem;opacity:.75;margin-bottom:12px}
-.qitem{border:1px solid #dce4ea;border-radius:10px;padding:9px 11px;margin:7px 0;background:var(--background-color);font-size:.87rem;line-height:1.5}
-.qitem small{opacity:.72}
-.tag{display:inline-block;border-radius:7px;padding:3px 7px;font-size:.75rem;font-weight:700;margin:4px 0}
-[data-testid="stDataFrame"]{border-radius:13px;overflow:hidden}
-</style>""", unsafe_allow_html=True)
+:root{color-scheme:dark;--able-bg:#202647;--able-surface:#333960;--able-border:#8175ad;--able-text:#f6f3ff;--able-muted:#b7b5d0;--able-accent:#a98aff}
+.stApp,[data-testid="stAppViewContainer"],[data-testid="stMain"]{
+ background:radial-gradient(ellipse 62% 48% at 78% 18%,rgba(147,105,230,.29),transparent 78%),#202647!important;color:var(--able-text)!important}
+[data-testid="stHeader"]{background:rgba(32,38,71,.94)!important}
+[data-testid="stMainBlockContainer"],.block-container{max-width:1150px!important;padding:2rem 2rem 5rem!important;box-sizing:border-box!important}
+[data-testid="stSidebar"]{background:#252b50!important;border-right:1px solid #302e4d!important;overflow-x:hidden!important}
+[data-testid="stSidebar"] [data-testid="stSidebarContent"]{padding-left:1rem!important;padding-right:1rem!important;box-sizing:border-box!important;overflow-x:hidden!important}
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{min-width:0!important}
+[data-testid="stSidebar"] [role="radiogroup"]{gap:.2rem!important}
+[data-testid="stSidebar"] [role="radiogroup"]>label{padding:.45rem .55rem!important;border-radius:11px!important;min-width:0!important;align-items:center!important}
+[data-testid="stSidebar"] [role="radiogroup"]>label:has(input:checked){background:#392b72!important}
+[data-testid="stSidebar"] [role="radiogroup"]>label [data-testid="stRadioIcon"]{display:none!important}
+[data-testid="stSidebar"] [role="radiogroup"]>label>div:first-child:has(input){width:0!important;min-width:0!important;margin:0!important;overflow:hidden!important}
+[data-testid="stSidebar"] *{color:var(--able-text)}
+[data-testid="stSidebar"] [data-testid="stExpander"]{background:#191d3c!important;border:1px solid #35365d!important}
+[data-testid="stAppViewContainer"] h1,[data-testid="stAppViewContainer"] h2,[data-testid="stAppViewContainer"] h3,[data-testid="stAppViewContainer"] p{color:var(--able-text)}
+[data-testid="stCaptionContainer"] p{color:var(--able-muted)!important}
+/* Uniform buttons, including secondary, navigation and OAuth link buttons */
+[data-testid="stAppViewContainer"] button,[data-testid="stSidebar"] button,
+[data-testid="stAppViewContainer"] a[data-testid="stLinkButton"]{
+ background:#3b426b!important;color:#f7f4ff!important;border:1px solid #5a527f!important;border-radius:11px!important;box-shadow:none!important}
+[data-testid="stAppViewContainer"] button *,[data-testid="stSidebar"] button *{color:inherit!important}
+[data-testid="stAppViewContainer"] button:hover,[data-testid="stSidebar"] button:hover{background:#3a3164!important;border-color:#a88aff!important}
+[data-testid="stAppViewContainer"] button[kind="primary"], [data-testid="stAppViewContainer"] button[data-testid="stBaseButton-primary"]{background:#7351ce!important;color:white!important;border-color:#8e70ea!important}
+[data-testid="stAppViewContainer"] input,[data-testid="stAppViewContainer"] textarea,
+[data-testid="stAppViewContainer"] [data-baseweb="select"]>div,
+[data-testid="stSidebar"] input{background:#3a4066!important;color:#faf8ff!important;border-color:#595579!important;caret-color:#fff!important}
+[data-testid="stAppViewContainer"] input::placeholder,[data-testid="stAppViewContainer"] textarea::placeholder{color:#bcb6d2!important;opacity:1!important}
+[data-testid="stFileUploader"]{background:#1b203d!important;border-radius:13px!important}
+[data-testid="stFileUploaderDropzone"]{background:#202541!important;border:1px dashed #71659d!important;border-radius:12px!important}
+[data-testid="stFileUploaderDropzone"] *{color:#eee9ff!important}
+[data-testid="stPopoverBody"]{background:#292c50!important;border:1px solid #65588d!important;color:#f6f2ff!important;max-width:calc(100vw - 24px)!important;box-sizing:border-box!important}
+[data-testid="stPopoverBody"] [data-testid="stHorizontalBlock"]{min-width:0!important}
+/* Restore calendar readable colors, keep all seven columns within their container */
+.cal-grid{display:grid!important;grid-template-columns:repeat(7,minmax(0,1fr))!important;gap:4px!important;width:100%!important;min-width:0!important;box-sizing:border-box!important}
+.cal-grid>*{min-width:0!important;box-sizing:border-box!important}
+.cal-week{background:#303357!important;color:#e9e4ff!important;border-radius:7px!important;text-align:center!important}
+.cal-day{background:#171b37!important;border:1px solid #4a486d!important;border-radius:9px!important;min-width:0!important;overflow:hidden!important}
+.cal-num{color:#f5f2ff!important}.cal-other{opacity:.45}.cal-today{outline:2px solid #a98aff!important;outline-offset:-2px}
+.cal-chip{overflow-wrap:anywhere!important;word-break:break-word!important}
+.cal-task{background:#4c352b!important;color:#ffddae!important}.cal-meeting{background:#213c58!important;color:#b8e4ff!important}
+.cal-more{color:#c3bce2!important}
+/* Homepage hero and shortcut cards */
+.able-dark-hero{text-align:center;padding:clamp(24px,6vh,72px) 8px 28px!important}
+.able-star{font-size:52px;color:#c18cff;text-shadow:0 0 28px #784bc2}
+.able-brand{font-size:clamp(46px,5vw,72px);letter-spacing:.13em;font-weight:800;color:white;line-height:1.15}
+.able-tagline{font-size:1.02rem;font-weight:650;color:#e7dbff}
+.able-hero-sub{margin-top:20px;line-height:1.75;color:#c7c2df}
+.st-key-able_shortcut_mail button,.st-key-able_shortcut_calendar button,.st-key-able_shortcut_meeting button,.st-key-able_shortcut_tasks button{
+ min-height:94px!important;width:100%!important;background:linear-gradient(135deg,#302d58,#232342)!important;
+ border:1px solid #68578e!important;border-radius:17px!important;color:#fff!important;font-weight:700!important;font-size:.98rem!important}
+.st-key-able_shortcut_mail button:hover,.st-key-able_shortcut_calendar button:hover,.st-key-able_shortcut_meeting button:hover,.st-key-able_shortcut_tasks button:hover{background:#41366f!important;transform:translateY(-1px)}
+/* Existing attachment / text / calendar / mic / send row; no widget replacement */
+[data-testid="stHorizontalBlock"]:has(.able-input-anchor){align-items:center!important;gap:.28rem!important;padding:.5rem .6rem!important;
+ background:#3b3b68!important;border:1px solid #8768ce!important;border-radius:23px!important;box-shadow:0 12px 30px rgba(73,43,139,.2)!important}
+.able-input-anchor{display:none!important}
+[data-testid="stHorizontalBlock"]:has(.able-input-anchor)>[data-testid="stColumn"]{min-width:0!important}
+[data-testid="stHorizontalBlock"]:has(.able-input-anchor) [data-testid="stTextInput"] input{min-height:42px!important;border-radius:11px!important;background:#34375e!important;border:1px solid #5a517d!important}
+[data-testid="stHorizontalBlock"]:has(.able-input-anchor) button{min-height:40px!important;min-width:34px!important;padding:.25rem!important;background:transparent!important;border:0!important;color:#eee3ff!important;font-size:1.05rem!important}
+[data-testid="stHorizontalBlock"]:has(.able-input-anchor) button:hover{background:#40366c!important}
+.st-key-able_inline_send button{background:#7450d2!important;color:#fff!important;border-radius:11px!important}
+[data-testid="stChatMessage"]{background:#1d2040;border:1px solid #36345e;border-radius:15px}
+@media(max-width:850px){[data-testid="stMainBlockContainer"],.block-container{padding:1rem .7rem 4rem!important}.able-dark-hero{padding:24px 4px 20px!important}
+ [data-testid="stHorizontalBlock"]:has(.able-input-anchor){gap:0!important;padding:.28rem!important}
+ .cal-day{padding:3px!important;min-height:64px!important}.cal-chip{font-size:9px!important;padding:2px!important}}
+
+/* ABLE restored home, slightly brighter violet dark theme */
+.able-home{display:flex;flex-direction:column;align-items:center;text-align:center;padding:clamp(30px,7vh,82px) 0 24px!important}
+.able-home .able-orb{font-size:47px;color:#c8a6ff;text-shadow:0 0 30px rgba(174,118,255,.5);margin-bottom:6px}
+.able-home h1{font-size:clamp(36px,4vw,56px)!important;font-weight:800!important;letter-spacing:-.035em;margin:0!important;color:#fff!important}
+.able-home p{color:#c5c5e5!important;margin:10px 0 0!important;font-size:1.03rem!important}
+.able-shortcut-intro{text-align:center;color:#c8c5e4;font-size:.98rem;margin:2px 0 18px}
+.st-key-able_shortcut_mail button,.st-key-able_shortcut_calendar button,.st-key-able_shortcut_meeting button,.st-key-able_shortcut_tasks button{background:linear-gradient(140deg,#393663,#2d3158)!important;border-color:#8070b2!important;min-height:88px!important}
+[data-testid="stHorizontalBlock"]:has(.able-input-anchor){background:#3b3b68!important;border:1px solid #9b7de0!important}
+[data-testid="stHorizontalBlock"]:has(.able-input-anchor) input{background:#34375e!important;color:#fff!important;border:1px solid #746b9c!important}
+[data-testid="stPopoverBody"]{min-width:min(370px,calc(100vw - 24px))!important;width:min(420px,calc(100vw - 24px))!important;overflow-x:hidden!important}
+[data-testid="stPopoverBody"] .cal-grid{grid-template-columns:repeat(7,minmax(0,1fr))!important;width:100%!important}
+[data-testid="stSidebar"]{min-width:260px;max-width:340px}
+</style>""",unsafe_allow_html=True)
+
+
+# ABLE UI v7: uploader cards and explanatory text, all tabs.
+# This stylesheet is loaded before page rendering, so it also covers tabs and popovers.
+st.markdown(r"""<style>
+/* Uploaded file chips have their own light backgrounds in Streamlit; override the chip itself. */
+.stApp [data-testid="stFileUploader"] [data-testid="stFileUploaderFile"],
+.stApp [data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] > div,
+.stApp [data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] > div > div,
+.stApp [data-testid="stFileUploader"] [data-testid="stFileUploaderFileData"],
+.stApp [data-testid="stFileUploader"] [data-testid="stFileUploaderFileName"] {
+  background-color:#353B60!important; color:#F9F7FF!important;
+  border-color:#7772A9!important;
+}
+.stApp [data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] {
+  border:1px solid #7772A9!important; border-radius:11px!important;
+  padding:4px 8px!important; min-width:0!important;
+}
+.stApp [data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] :is(span,p,small,div),
+.stApp [data-testid="stFileUploader"] [data-testid="stFileUploaderFileName"],
+.stApp [data-testid="stFileUploader"] [data-testid="stFileUploaderFileSize"] {
+  color:#F6F4FF!important; opacity:1!important; text-shadow:none!important;
+}
+.stApp [data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] [data-testid="stFileUploaderFileSize"],
+.stApp [data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] small {
+  color:#D5D2E9!important;
+}
+.stApp [data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] button {
+  background:#49456F!important; color:#FFFFFF!important; border:1px solid #8179B3!important;
+}
+.stApp [data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] button svg {
+  color:#FFFFFF!important; fill:none!important;
+}
+.stApp [data-testid="stFileUploaderDropzone"] {
+  background:#2D3355!important; border:1px dashed #8C81BC!important;
+}
+.stApp [data-testid="stFileUploaderDropzone"] :is(span,p,small,div) {
+  color:#E9E7FA!important; opacity:1!important;
+}
+.stApp [data-testid="stFileUploaderDropzone"] button {
+  background:#514780!important; color:#FFFFFF!important; border:1px solid #A69AD8!important;
+}
+/* Descriptions, muted Markdown, labels and alert text remain legible on every page. */
+.stApp [data-testid="stCaptionContainer"] :is(p,span),
+.stApp [data-testid="stMarkdownContainer"] :is(p,li,li p,ol,ul),
+.stApp [data-testid="stWidgetLabel"] :is(p,span),
+.stApp [data-testid="stExpander"] summary :is(p,span) {
+  color:#E7E5F5!important; opacity:1!important;
+}
+.stApp [data-testid="stMarkdownContainer"] :is(h1,h2,h3,h4,strong) {
+  color:#FFFFFF!important; opacity:1!important;
+}
+.stApp [data-testid="stMarkdownContainer"] li::marker {color:#CDBAFF!important;}
+.stApp [data-testid="stAlert"] :is(p,li,span) {color:#F4F3FF!important;opacity:1!important;}
+.stApp [data-testid="stFileUploader"] {min-width:0!important;}
+.stApp [data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] :is(p,span) {
+  overflow-wrap:anywhere!important; word-break:break-word!important;
+}
+/* A light native input (e.g. date picker) must use dark text if not themed by Streamlit. */
+.stApp input[type="date"] {color-scheme:dark!important;}
+</style>""",unsafe_allow_html=True)
+
+
+# ABLE v8 — uploader component contrast, loaded before all page widgets.
+st.markdown(r"""<style>
+/* All uploader surfaces, including the nested light file chip. */
+[data-testid="stFileUploader"] [data-testid="stFileUploaderFile"],
+[data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] :is(div,section,article),
+[data-testid="stFileUploader"] [data-testid="stFileUploaderFileData"],
+[data-testid="stFileUploader"] [data-testid="stFileUploaderFileName"],
+[data-testid="stFileUploader"] [data-testid="stFileUploaderFileSize"],
+[data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] [data-baseweb] {
+ background:#303655!important;background-color:#303655!important;
+ color:#FFFFFF!important;opacity:1!important;
+}
+[data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] {
+ border:1px solid #8980C4!important;border-radius:10px!important;
+ min-width:0!important;
+}
+[data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] :is(p,span,small,strong,label),
+[data-testid="stFileUploader"] [data-testid="stFileUploaderFileName"],
+[data-testid="stFileUploader"] [data-testid="stFileUploaderFileSize"] {
+ color:#FFFFFF!important;-webkit-text-fill-color:#FFFFFF!important;
+ opacity:1!important;text-shadow:none!important;
+}
+[data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] button,
+[data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] button * {
+ background:#45456F!important;color:#FFFFFF!important;
+ -webkit-text-fill-color:#FFFFFF!important;
+}
+[data-testid="stFileUploader"] [data-testid="stFileUploaderFile"] svg {color:#FFFFFF!important;}
+[data-testid="stFileUploaderDropzone"] {background:#2B3151!important;border:1px dashed #8E83C3!important;}
+[data-testid="stFileUploaderDropzone"] :is(p,span,small) {color:#F4F0FF!important;opacity:1!important;}
+/* Date inputs remain legible even when Streamlit supplies a light field. */
+[data-testid="stDateInput"] input {background:#E9ECF6!important;color:#17203A!important;
+ -webkit-text-fill-color:#17203A!important;}
+/* Secondary explanatory copy across all pages. */
+.stApp [data-testid="stCaptionContainer"] p {color:#D8D9EB!important;opacity:1!important;}
+</style>""",unsafe_allow_html=True)
 
 # ABLE password gate (existing app feature)
 import hmac
@@ -69,8 +233,25 @@ def config(name, default=""):
             return default
         raise
 
-# 로그인 화면 제거: 앱을 열면 바로 홈 화면이 표시됩니다.
-# 주의: 공개 URL 사용자 모두가 앱에 접근할 수 있습니다.
+# 최초 접속 시 공통 비밀번호 확인 (Streamlit Secrets: ABLE_APP_PASSWORD)
+import hmac
+# ⭐ [통합 기능] 비밀번호 인증: 최초 접속 시 Secrets 비밀번호 확인
+app_password = str(config("ABLE_APP_PASSWORD", ""))
+if not app_password:
+    st.error("Streamlit Secrets에 ABLE_APP_PASSWORD를 설정해 주세요.")
+    st.stop()
+if not st.session_state.get("authenticated", False):
+    st.title("🔒 ABLE 로그인")
+    with st.form("able_login"):
+        supplied = st.text_input("접속 비밀번호", type="password")
+        do_login = st.form_submit_button("로그인", type="primary")
+    if do_login:
+        if hmac.compare_digest(supplied, app_password):
+            st.session_state.authenticated = True
+            st.rerun()
+        else:
+            st.error("비밀번호가 올바르지 않습니다.")
+    st.stop()
 
 openai_api_key = config("OPENAI_API_KEY")
 if not openai_api_key:
@@ -511,6 +692,7 @@ def structured_ai(instruction, document, schema):
     return json.loads(result.output_text)
 
 
+# ⭐ [통합 기능] AI 업무 추출: 평가 항목·근거·검토 필요 정보 추출
 def extract_tasks(document, meeting_day):
     prompt = f"""회의 기준일: {meeting_day.isoformat()}.
 회의에서 명시적으로 담당자가 배정된 업무만 추출하세요. 누가 실제로 실행하는지 구별하고
@@ -565,6 +747,7 @@ def extract_events(document, meeting_day):
     return rows
 
 
+# ⭐ [통합 기능] 업무 점수 기본 가중치: 중요도35 긴급도30 지연영향25 처리용이10
 DEFAULT_WEIGHTS = {
     "importance": 0.35,
     "urgency": 0.30,
@@ -654,6 +837,7 @@ def priority_score(task):
 # 3. 가중치 점수 모델 (추가)
 # ==========================================
 
+# ⭐ [통합 기능] 가중 우선순위 점수 계산
 def weighted_priority_score(task):
 
     # 기존 아이젠하워 매트릭스 활용
@@ -727,6 +911,7 @@ def weighted_priority_score(task):
 # 4. 업무 우선순위 자동 정렬 (추가)
 # ==========================================
 
+# ⭐ [통합 기능] 전체 업무 우선순위 자동 정렬
 def rank_tasks(tasks):
     ranked = []
 
@@ -793,24 +978,31 @@ def conflicts(events):
             except ValueError: continue
     return found
 
+
+# ── 일정 관리 확장 함수: 승인 일정, 업무 마감일, CSV 복원 ──
 def clean_time(value):
-    if value is None or pd.isna(value):
+    """일정 시간의 누락값을 빈 문자열로 정규화합니다."""
+    if value is None:
         return ""
-
+    try:
+        missing = pd.isna(value)
+        if isinstance(missing, (bool, int)) and missing:
+            return ""
+    except (TypeError, ValueError):
+        pass
     text = str(value).strip()
-
     if text.lower() in ("null", "none", "nan", "nat", ""):
         return ""
-
     return text
-# ── 일정 관리 확장 함수: 승인 일정, 업무 마감일, CSV 복원 ──
+
+
 def normalize_event(raw):
     event = dict(raw)
     event["id"] = str(event.get("id") or uuid.uuid4().hex)
     event["title"] = str(event.get("title") or "").strip()
     event["date"] = str(event.get("date") or "").strip()[:10]
     event["start"] = clean_time(event.get("start"))
-    event["end"] = clean_time(event.get("end")) 
+    event["end"] = clean_time(event.get("end"))
     event["source"] = str(event.get("source") or "회의/직접 등록").strip()
     event["task_id"] = str(event.get("task_id") or "")
     if not event["title"]:
@@ -844,6 +1036,7 @@ def merge_events(previous, incoming):
     return result, added, updated, skipped
 
 
+# ⭐ [통합 기능] 업무 마감일과 내부 캘린더 동기화
 def sync_task_deadlines(events, tasks, enable_new=False):
     """업무 마감일을 종일 일정으로 반영. 이미 연결한 마감일은 업무 수정에 맞춰 갱신."""
     result = [normalize_event(e) for e in events]
@@ -899,6 +1092,7 @@ def read_events_csv(uploaded):
     return results
 
 
+# ⭐ [통합 기능] 캘린더 4종 색상: 회의·직접 등록/일반 마감/3일 이내/기한 경과
 def render_month_calendar(events, month_start):
     """추가 JS 없이 Streamlit에서 월간 달력을 HTML로 시각화."""
     month_start = month_start.replace(day=1)
@@ -923,6 +1117,12 @@ def render_month_calendar(events, month_start):
             for event in day_items[:4]:
                 src = event.get("source", "")
                 cls = "cal-task" if src == "업무 마감" else "cal-meeting"
+                if src == "업무 마감":
+                    days_left = (d - date.today()).days
+                    if days_left < 0:
+                        cls = "cal-task-overdue"
+                    elif days_left <= 3:
+                        cls = "cal-task-soon"
                 caption = (event.get("start", "") + " " if event.get("start") else "") + event["title"]
                 html.append(f'<div class="cal-chip {cls}" title="{escape(caption, quote=True)}">{escape(caption)}</div>')
             if len(day_items) > 4:
@@ -1152,7 +1352,13 @@ def analyze_meeting_automatically(meeting_day):
         raise ValueError('회의록 파일에 분석할 내용이 없습니다.')
     # 요약, 업무/우선순위, 일정, 메일 초안까지 자동으로 준비
     with st.spinner('1/3 · 회의록 요약 중...'):
-        summary = ask_ai('회의록을 요약하고 핵심 결정 사항과 후속 조치를 정리해줘.', document)
+        summary = ask_ai("""업로드한 회의록을 실제 사람이 작성한 자연스러운 회의록 문체로 정리해줘.
+제목은 '회의 내용 정리'로 하고, 논의된 내용, 확정된 결정, 담당자별 할 일과 기한,
+추가 확인이 필요한 사항을 실제 내용이 있는 항목에 한해 정리해줘.
+'핵심 결정 사항 및 후속 조치' 같은 기계적인 제목은 사용하지 마.
+# ⭐ [통합 기능] 회의 요약 문체 개선 및 점수 표현 제외
+중요도·긴급도·점수·사분면은 이 회의 요약에 쓰지 마.
+원문에 없는 내용은 추측하지 마.""", document)
     st.session_state.oneclick_summary = summary
     # 회의록에 맞는 제목과 본문을 별도로 AI 생성 (실제 발송 없음)
     try:
@@ -1187,8 +1393,10 @@ if "able_navigation" not in st.session_state:
 load_mail_settings()
 
 with st.sidebar:
+    st.caption("ABLE UI 수정 v8 · 파일 카드 대비 개선")
     st.markdown("### ✦ ABLE")
     st.caption("AI 업무비서")
+    st.caption("UI 개선 · 일정 공란 처리 v2")
     selected_page = st.radio(
         "메뉴", PAGES,
         key="able_navigation",
@@ -1197,11 +1405,30 @@ with st.sidebar:
     st.divider()
     st.markdown("**개인 설정**")
     user_name = st.text_input("사용자 이름", value="김 대리")
-    if st.button("대화 기록 초기화", use_container_width=True):
-        st.session_state.messages = []
-        st.session_state.last_answer = ""
-        st.session_state.last_audio = None
-        st.rerun()
+    with st.expander("대화 관리", expanded=False):
+        for i, message in enumerate(st.session_state.messages):
+            c1, c2 = st.columns([5, 1])
+            with c1:
+                st.caption(f"{'나' if message['role'] == 'user' else '에이블'} · {str(message['content'])[:65]}")
+            with c2:
+                # ⭐ [통합 기능] 홈 대화 개별 삭제
+                if st.button("🗑️", key=f"remove_message_{i}", help="이 메시지 삭제"):
+                    st.session_state.messages.pop(i)
+                    st.rerun()
+        # ⭐ [통합 기능] 홈 전체 대화 삭제 및 확인
+        if st.button("전체 대화 삭제", use_container_width=True):
+            st.session_state.able_confirm_clear = True
+        if st.session_state.get("able_confirm_clear"):
+            st.warning("전체 대화를 삭제할까요?")
+            if st.button("삭제 확인", type="primary"):
+                st.session_state.messages = []
+                st.session_state.last_answer = ""
+                st.session_state.last_audio = None
+                st.session_state.able_confirm_clear = False
+                st.rerun()
+            if st.button("취소"):
+                st.session_state.able_confirm_clear = False
+                st.rerun()
     st.caption("업무 자료에 민감한 정보가 포함되지 않도록 확인하세요.")
     st.divider()
     with st.expander("✉️ 이메일 · 주소록 관리", expanded=False):
@@ -1255,11 +1482,42 @@ st.markdown("""<style>
 .able-home h1{font-size:2.2rem;letter-spacing:-.06em;margin:0 0 10px;font-weight:750}
 .able-home p{color:#788596;font-size:1rem;margin:0}
 [data-testid="stSidebar"]{border-right:1px solid #e8edf2}
-[data-testid="stSidebar"] [data-testid="stExpander"]{border:1px solid #e3ebf5;border-radius:14px;background:#f8fbff}
-[data-testid="stSidebar"] [data-testid="stExpander"] summary{font-weight:650;color:#27466e}
+/* Sidebar expander is styled in the dedicated dark-theme override below. */
 [data-testid="stChatInput"]{max-width:790px;margin:auto}
 /* 월간 미니 달력이 7열로 보이도록 팝오버 넓이 확보 */
 [data-testid="stPopoverBody"]:has(.cal-grid){min-width:min(560px,90vw)}
+
+/* ABLE sidebar conversation-management contrast fix: scoped, no functional changes */
+[data-testid="stSidebar"] [data-testid="stExpander"] {
+  background:#292e53!important;border:1px solid #65618c!important;
+  border-radius:14px!important;overflow:hidden!important;
+}
+[data-testid="stSidebar"] [data-testid="stExpander"] details,
+[data-testid="stSidebar"] [data-testid="stExpander"] details>summary,
+[data-testid="stSidebar"] [data-testid="stExpander"] summary {
+  background:#30365d!important;color:#f8f5ff!important;
+}
+[data-testid="stSidebar"] [data-testid="stExpander"] summary *,
+[data-testid="stSidebar"] [data-testid="stExpander"] summary svg {
+  color:#f8f5ff!important;fill:currentColor!important;opacity:1!important;
+}
+[data-testid="stSidebar"] [data-testid="stExpander"] summary:hover {
+  background:#424573!important;
+}
+[data-testid="stSidebar"] [data-testid="stExpander"] [data-testid="stVerticalBlock"] {
+  background:#292e53!important;
+}
+[data-testid="stSidebar"] [data-testid="stExpander"] button {
+  background:#48416e!important;color:#fff!important;
+  border:1px solid #8f83c4!important;opacity:1!important;
+}
+[data-testid="stSidebar"] [data-testid="stExpander"] button:hover {
+  background:#5c4b8d!important;
+}
+[data-testid="stSidebar"] [data-testid="stExpander"] button * {color:#fff!important;}
+[data-testid="stSidebar"] [data-testid="stExpander"] [data-testid="stCaptionContainer"] p {
+  color:#d6d2ec!important;
+}
 </style>""", unsafe_allow_html=True)
 
 
@@ -1296,7 +1554,8 @@ export default function(component) {
     clearTimeout(stopTimer);
     stopTimer = setTimeout(() => {
       if (active && recognition) recognition.stop();
-    }, 1500);
+    // ⭐ [통합 기능] 음성 인식 침묵 대기 3초
+    }, 3000);
   };
   if (!Recognition) {
     btn.title = '이 브라우저는 음성 인식을 지원하지 않습니다. Chrome 또는 Edge를 이용하세요.';
@@ -1313,7 +1572,7 @@ export default function(component) {
     recognition = new Recognition();
     recognition.lang = 'ko-KR';
     recognition.interimResults = true;
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.maxAlternatives = 1;
     transcript = '';
     finished = false;
@@ -1324,7 +1583,8 @@ export default function(component) {
       btn.textContent = '🔴';
       btn.setAttribute('aria-label', '음성 인식 취소');
       show('듣고 있어요...');
-      maxTimer = setTimeout(() => { if (active) recognition.stop(); }, 30000);
+      // ⭐ [통합 기능] 음성 인식 최대 60초
+      maxTimer = setTimeout(() => { if (active) recognition.stop(); }, 60000);
     };
     recognition.onresult = (event) => {
       let combined = '';
@@ -1333,7 +1593,7 @@ export default function(component) {
       }
       transcript = combined.trim();
       if (transcript) {
-        show('말이 끝나면 자동 전송');
+        show('3초 동안 말이 없으면 질문을 전송합니다');
         scheduleEnd();
       }
     };
@@ -1632,9 +1892,22 @@ if selected_page == PAGES[0]:
     # 홈 화면
     st.markdown("""<div class="able-home">
       <div class="able-orb">✦</div>
-      <h1>무엇을 도와드릴까요?</h1>
-      <p>당신의 AI 개인비서, ABLE</p>
+      <h1>ABLE</h1>
+      <p>나의 AI 개인비서 · 오늘은 무엇을 도와드릴까요?</p>
     </div>""", unsafe_allow_html=True)
+    if True:  # 바로가기 카드는 대화 중에도 항상 표시
+        st.markdown('<div class="able-shortcut-intro">이메일, 일정, 회의록, 업무 정리까지 한곳에서 시작하세요.</div>', unsafe_allow_html=True)
+        shortcut_cols = st.columns(4, gap="small")
+        shortcuts = [
+            ("✉️ 이메일 작성", PAGES[4], "able_shortcut_mail"),
+            ("📅 일정 확인", PAGES[3], "able_shortcut_calendar"),
+            ("📄 회의록 요약", PAGES[1], "able_shortcut_meeting"),
+            ("✅ 업무 정리", PAGES[2], "able_shortcut_tasks"),
+        ]
+        for col, (label, target, key) in zip(shortcut_cols, shortcuts):
+            with col:
+                st.button(label, key=key, use_container_width=True,
+                          on_click=navigate_to, args=(target,))
     for message in st.session_state.messages[-10:]:
         with st.chat_message(message["role"]):
             st.write(message["content"])
@@ -1649,21 +1922,6 @@ if selected_page == PAGES[0]:
 
     # 음성 질문은 자동 읽기, 텍스트 질문은 사용자에게 선택권 제공
 
-    st.markdown("""<style>
-    div[data-testid="stHorizontalBlock"]:has(.able-input-anchor) {
-        align-items:center; gap:0.15rem;
-        border:1px solid #e1e5ec; border-radius:32px;
-        padding:.28rem .42rem; background:white;
-        box-shadow:0 2px 10px rgba(20,35,60,.035);
-    }
-    div[data-testid="stHorizontalBlock"]:has(.able-input-anchor) div[data-testid="stTextInput"] input {
-        border:none; box-shadow:none; background:transparent;
-    }
-    div[data-testid="stHorizontalBlock"]:has(.able-input-anchor) button {
-        border:0; box-shadow:none; background:transparent; padding:.12rem;
-    }
-    .able-input-anchor {display:none}
-    </style>""", unsafe_allow_html=True)
     attach_col, input_col, cal_col, mic_col, send_col = st.columns(
         [0.62, 8.7, 0.55, 0.55, 0.55], vertical_alignment="center", gap="small"
     )
@@ -1677,7 +1935,7 @@ if selected_page == PAGES[0]:
                 help="첨부만으로 분석하지 않습니다. 채팅으로 분석을 요청하세요."
             )
             if home_file is not None:
-                st.success(f"첨부 완료: {home_file.name}")
+                st.caption(f"✅ 첨부 완료: {home_file.name}")
             elif st.session_state.document:
                 st.caption(f"최근 회의록: {st.session_state.doc_name or '이름 없음'}")
     with input_col:
@@ -1706,19 +1964,8 @@ if selected_page == PAGES[0]:
                         cursor.replace(day=28) + timedelta(days=5)
                     ).replace(day=1).isoformat()
                     st.rerun()
-            st.markdown("""<style>
-            div[data-testid="stPopoverBody"] {min-width:360px;}
-            .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
-            .cal-week{text-align:center;font-size:11px;font-weight:700;padding:5px 0;background:#eef2f7;border-radius:5px}
-            .cal-day{min-height:42px;padding:4px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden}
-            .cal-other{opacity:.3}.cal-today{outline:2px solid #4a86bd}
-            .cal-num{font-size:11px;font-weight:700;margin-bottom:3px}
-            .cal-chip{font-size:9px;line-height:1.2;padding:2px;margin:2px 0;border-radius:3px;overflow-wrap:anywhere}
-            .cal-task{background:#fff0d7;color:#8a4300}
-            .cal-meeting{background:#e1f1ff;color:#164b76}
-            .cal-more{font-size:9px}
-            </style>""", unsafe_allow_html=True)
             st.markdown(render_month_calendar(st.session_state.events, cursor), unsafe_allow_html=True)
+            st.caption("🔵 회의/직접 등록 · 🟠 일반 업무 마감 · 🔴 3일 이내 마감 · ⚪ 기한 경과")
             st.button("전체 일정 관리 열기", key="home_open_calendar",
                       on_click=navigate_to, args=(PAGES[3],))
 
@@ -1768,7 +2015,7 @@ if selected_page == PAGES[0]:
         answer_id = st.session_state.get("able_audio_answer_id", "")
         if st.session_state.get("able_reply_mode") == "voice":
             should_play = True
-            st.caption("🔊 음성 질문에 대한 답변을 자동 재생합니다.")
+            st.caption("🔊 음성 답변이 준비됩니다. 아래 플레이어에서 재생·일시정지할 수 있습니다.")
         else:
             st.caption("🔊 이 답변을 음성으로 읽어드릴까요?")
             yes_col, no_col = st.columns([1, 1])
@@ -1786,9 +2033,29 @@ if selected_page == PAGES[0]:
                         st.session_state.last_audio = make_speech(last_answer)
                         st.session_state.able_tts_audio_id = answer_id
                 if st.session_state.get("last_audio"):
-                    st.audio(st.session_state.last_audio, format="audio/mp3", autoplay=True)
+                    # ⭐ [통합 기능] 음성 답변 자동 재생 해제·기본 재생/일시정지
+                    st.audio(st.session_state.last_audio, format="audio/mp3", autoplay=False)
             except Exception as exc:
                 st.warning(f"음성 답변 생성 오류: {exc}")
+
+
+    # 새 답변이 나타나면 최신 메시지로 자동 스크롤 (기존 입력창 유지).
+    # Streamlit의 iframe에서 상위 문서 접근이 차단되면 조용히 종료합니다.
+    if st.session_state.get("messages"):
+        import streamlit.components.v1 as components
+        components.html("""<script>
+        (function () {
+          try {
+            const doc = window.parent.document;
+            const items = doc.querySelectorAll('[data-testid="stChatMessage"]');
+            if (!items.length) return;
+            const last = items[items.length - 1];
+            const container = doc.querySelector('[data-testid="stMain"]') || doc.scrollingElement;
+            function go() { last.scrollIntoView({behavior:'smooth',block:'end'}); }
+            window.requestAnimationFrame(() => window.setTimeout(go, 180));
+          } catch (e) { /* iframe cross-origin restrictions */ }
+        })();
+        </script>""", height=0)
 
 
 # 회의록 원클릭 분석: 분석은 자동, 외부 작업은 명시적 승인
@@ -1863,8 +2130,16 @@ if selected_page == PAGES[1]:
             ranked = sorted(tasks, key=lambda x: priority_score(x)[1], reverse=True)
             for rank, task in enumerate(ranked[:3], 1):
                 q, score, _ = priority_score(task)
-                st.write(f"**{rank}. {task.get('task', '')}** · 담당 {task.get('owner') or '확인 필요'} · 마감 {task.get('due') or '미확인'} · {q} ({score:.1f}점)")
-            st.caption("전체 업무와 아이젠하워 4분면은 '업무 우선순위' 메뉴에서 확인·수정할 수 있습니다.")
+                # ⭐ [통합 기능] 매우 높은 업무만 빨간 글씨로 강조
+                # 회의 요약에서는 점수를 숨기고, 중요도와 긴급도가 모두 5인 업무만 빨간색으로 표시
+                urgency = effective_urgency(task, priority_score(task)[2])
+                is_very_high = int(task.get("importance") or 3) == 5 and urgency == 5
+                name = escape(str(task.get("task") or ""))
+                owner = escape(str(task.get("owner") or "확인 필요"))
+                due = escape(str(task.get("due") or "미확인"))
+                color = "#dc2626" if is_very_high else "inherit"
+                st.markdown(f'<div style="padding:7px 0;color:{color};font-weight:{"800" if is_very_high else "500"}">{rank}. {name} · 담당 {owner} · 마감 {due}</div>', unsafe_allow_html=True)
+            st.caption("전체 업무는 '업무 우선순위' 메뉴에서 확인·수정할 수 있습니다.")
         else:
             st.info("추출된 업무가 없습니다.")
 
@@ -2001,6 +2276,7 @@ if selected_page == PAGES[2]:
         for col,num,label in zip(metric_cols,[len(tasks),high,missing,len({str(t.get('owner','')) for t in tasks if t.get('owner')})],["추출 업무","긴급·중요","마감일 미확인","담당자 수"]):
             with col:
                 st.metric(label,num)
+        # ⭐ [통합 기능] 가중 점수 기반 TOP3 표시
         st.markdown("#### 🏅 우선순위 TOP 3")
         for rank,t in enumerate(ranked[:3],start=1):
             with st.container(border=True):
@@ -2014,21 +2290,23 @@ if selected_page == PAGES[2]:
                         st.warning("AI 추론 또는 근거 부족: 담당자·마감일·점수를 확인하세요.")
                 with b:
                     st.metric("가중 점수",f"{t['score']:.1f}/10")
-        st.markdown("#### 🧭 아이젠하워 매트릭스")
-        qs=[("긴급·중요","즉시 실행"),("비긴급·중요","계획 수립"),("긴급·비중요","위임 검토"),("비긴급·비중요","보류 검토")]
+        st.markdown("#### 업무 분류")
+        # ⭐ [통합 기능] 업무 4분면별 서로 다른 색상 표시
+        qs=[("긴급·중요","즉시 실행","#dc2626","#fff1f2"),("비긴급·중요","계획 수립","#2563eb","#eff6ff"),("긴급·비중요","위임 검토","#d97706","#fffbeb"),("비긴급·비중요","보류 검토","#64748b","#f1f5f9")]
         for offset in [0,2]:
             cols=st.columns(2)
-            for col,(quadrant,hint) in zip(cols,qs[offset:offset+2]):
+            for col,(quadrant,hint,accent,tint) in zip(cols,qs[offset:offset+2]):
                 with col:
                     subset=[t for t in ranked if t['quadrant']==quadrant]
                     with st.container(border=True):
-                        st.markdown(f"**{quadrant} ({len(subset)}) · {hint}**")
+                        st.markdown(f'<div style="border-left:5px solid {accent};background:{tint};padding:12px;border-radius:9px;color:{accent};font-weight:800">{escape(quadrant)} ({len(subset)}) · {escape(hint)}</div>', unsafe_allow_html=True)
                         for t in subset:
                             st.write(f"• {t.get('task','')} — {t['score']:.1f}/10")
         st.markdown("#### ✍️ 업무 점수와 근거 수정")
         st.caption("AI가 추정한 값은 직접 수정할 수 있어요. 변경 후 저장하면 순위가 재계산됩니다.")
         frame = pd.DataFrame(tasks)
-        editable = ["task","owner","due","importance","impact","ease","stated_urgency","reason","evidence","needs_review"]
+        # ⭐ [최종 수정 1/3] 검토 필요 체크박스를 편집 표의 맨 왼쪽으로 이동
+        editable = ["needs_review","task","owner","due","importance","impact","ease","stated_urgency","reason","evidence"]
         for key in editable:
             if key not in frame.columns:
                 frame[key] = None if key == "stated_urgency" else (False if key == "needs_review" else (3 if key in ("importance","impact","ease") else ""))
@@ -2073,7 +2351,17 @@ if selected_page == PAGES[2]:
                 st.success("업무 평가를 저장했습니다.")
                 st.rerun()
         st.markdown("#### 📋 전체 우선순위")
-        table=pd.DataFrame([{"업무":t.get('task',''),"담당자":t.get('owner',''),"마감일":t.get('due',''),"분류":t['quadrant'],"가중 점수":t['score'],"평가 근거":t.get('reason',''),"검토 필요":t.get('needs_review',False)} for t in ranked])
+        # ⭐ [최종 수정 2/3] 전체 업무 순위 맨 왼쪽에 1부터 시작하는 순위 열 추가
+        # ⭐ [최종 수정 3/3] 전체 업무 순위에서 검토 필요 열 제거 (검토는 편집 표에서만)
+        table=pd.DataFrame([{
+            "순위": rank,
+            "업무": t.get('task', ''),
+            "담당자": t.get('owner', ''),
+            "마감일": t.get('due', ''),
+            "분류": t['quadrant'],
+            "가중 점수": t['score'],
+            "평가 근거": t.get('reason', ''),
+        } for rank, t in enumerate(ranked, 1)])
         st.dataframe(table,hide_index=True,use_container_width=True)
         st.download_button("⬇️ 업무 현황 CSV 다운로드",table.to_csv(index=False).encode('utf-8-sig'),"aivle_tasks.csv",mime="text/csv")
         st.caption("점수는 AI 평가와 날짜 기반 긴급도에 따른 추정치입니다. 마감일 미지정은 긴급도를 확정하지 않으며, 회의록의 명시적 긴급도는 우선 적용합니다.")
@@ -2173,18 +2461,7 @@ if selected_page == PAGES[3]:
         if st.button("다음 달 ▶", key="cal_next"):
             st.session_state.calendar_cursor = (cursor.replace(day=28) + timedelta(days=5)).replace(day=1).isoformat()
             st.rerun()
-    st.markdown("""<style>
-    .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
-    .cal-week{background:#eaf0f6;color:#243449;text-align:center;font-weight:700;padding:9px;border-radius:7px}
-    .cal-day{min-height:102px;padding:8px;border:1px solid #d9e1ed;border-radius:10px;background:var(--background-color);overflow:hidden}
-    .cal-other{opacity:.38}.cal-today{outline:2px solid #2383c6}
-    .cal-num{font-size:13px;font-weight:800;margin-bottom:7px}
-    .cal-chip{padding:4px 6px;border-radius:5px;margin:4px 0;font-size:11px;line-height:1.4;word-break:break-word}
-    .cal-task{background:#fff0d7;color:#8a4300;border-left:3px solid #ed9c28}
-    .cal-meeting{background:#e1f1ff;color:#164b76;border-left:3px solid #409bdb}
-    .cal-more{font-size:10px;color:#64748b}
-    @media(max-width:650px){.cal-day{padding:4px;min-height:83px}.cal-chip{font-size:9px;padding:2px}}
-    </style>""", unsafe_allow_html=True)
+    # 월간 달력은 상단의 통합 다크 테마 CSS를 사용합니다.
     st.markdown(render_month_calendar(st.session_state.events,cursor),unsafe_allow_html=True)
     st.caption("🔵 회의/직접 등록 일정  |  🟠 업무 우선순위의 마감일 (종일)")
 
@@ -2288,7 +2565,10 @@ if selected_page == PAGES[4]:
         st.success("회의록 이메일 초안이 자동으로 작성되었습니다. 아래 입력창에서 바로 수정하고 승인할 수 있어요.")
         with st.expander("📝 연동된 이메일 초안 미리보기 (읽기 전용)", expanded=True):
             st.markdown("**제목:** " + str(active_draft.get("subject") or ""))
-            st.text(str(active_draft.get("body") or ""))
+            # st.text() is plain text and can inherit an incompatible foreground color.
+            # Render the generated Markdown as formatted, readable preview instead.
+            with st.container(border=True):
+                st.markdown(str(active_draft.get("body") or "(본문 없음)"))
             st.caption("이 영역은 미리보기입니다. 수정은 아래의 '제목'·'본문' 입력창에서 해주세요.")
         if st.button("⬇️ 연동된 초안을 아래 편집창에 다시 적용", key="able_apply_draft_to_editor"):
             st.session_state["mail_to"] = str(active_draft.get("to") or "")
@@ -2423,3 +2703,225 @@ if selected_page == PAGES[5]:
     for ev in st.session_state.google_week_events:
         when = ev.get("start", {}).get("dateTime") or ev.get("start", {}).get("date", "")
         st.write(f"📅 {ev.get('summary', '(제목 없음)')} — {when}")
+
+
+# ABLE integration: final visual overrides (no OAuth behavior changes)
+st.markdown("""<style>
+/* Sidebar clipping and menu radio indicators */
+[data-testid="stSidebar"] [data-testid="stSidebarContent"] {padding-left:1.2rem!important;padding-right:1.2rem!important;overflow-x:visible!important}
+[data-testid="stSidebar"] [role="radiogroup"] label {overflow:visible!important}
+[data-testid="stSidebar"] [role="radiogroup"] [data-testid="stRadioIcon"] {display:none!important}
+/* OAuth link is rendered as an anchor: ensure both link and children are visible */
+a[data-testid="stLinkButton"], [data-testid="stLinkButton"] a, a[data-testid="stLinkButton"] * {background:#312b56!important;color:#fff!important;opacity:1!important;border-color:#8872c9!important;text-decoration:none!important}
+a[data-testid="stLinkButton"]:hover, [data-testid="stLinkButton"] a:hover {background:#4d3b83!important;color:#fff!important}
+/* Generic buttons and disabled states stay readable */
+.stApp button, .stApp button *, .stApp [data-testid="stBaseButton-secondary"], .stApp [data-testid="stBaseButton-secondary"] * {color:#f7f3ff!important}
+.stApp button:disabled, .stApp button:disabled * {color:#c2bdd8!important;opacity:.72!important}
+/* Home inline composer: do not change its five original functional columns */
+[data-testid="stHorizontalBlock"]:has(.able-input-anchor) {background:#222340!important;border:1px solid #8068bf!important;border-radius:28px!important;padding:7px 9px!important;align-items:center!important;gap:5px!important;overflow:visible!important}
+[data-testid="stHorizontalBlock"]:has(.able-input-anchor) input {background:#222340!important;color:#fff!important;border:0!important;box-shadow:none!important}
+[data-testid="stHorizontalBlock"]:has(.able-input-anchor) button {background:transparent!important;border:0!important;color:#f6efff!important;min-width:32px!important;padding:6px!important;font-size:16px!important}
+[data-testid="stHorizontalBlock"]:has(.able-input-anchor) [data-testid="stPopover"] {min-width:0!important}
+/* Popover width prevents mini calendar from being clipped by narrow icon columns */
+[data-testid="stPopoverBody"]:has(.cal-grid) {width:min(570px,calc(100vw - 36px))!important;min-width:min(570px,calc(100vw - 36px))!important;max-width:calc(100vw - 36px)!important;overflow-x:auto!important}
+[data-testid="stPopoverBody"] .cal-grid {display:grid!important;grid-template-columns:repeat(7,minmax(0,1fr))!important;width:100%!important;min-width:0!important}
+[data-testid="stPopoverBody"] .cal-grid .cal-day {min-width:0!important;overflow:hidden!important}
+/* Date inputs and file upload readability */
+[data-testid="stDateInput"] input, [data-testid="stFileUploaderDropzone"] {background:#252746!important;color:#fff!important}
+[data-testid="stFileUploaderDropzone"] button {background:#3b315e!important;color:#fff!important}
+
+/* ABLE UI v3: common legibility and compact calendar; functional logic unchanged */
+.stApp {font-size:16px!important;}
+.stApp p,.stApp label,.stApp li,.stApp [data-testid="stMarkdownContainer"] {line-height:1.6;}
+.stApp [data-testid="stCaptionContainer"] p {color:#c9cbe1!important;font-size:.91rem!important;}
+.stApp [data-testid="stWidgetLabel"] p,.stApp label p {color:#f6f3ff!important;font-weight:600!important;}
+.stApp [data-testid="stNotification"] p,.stApp [data-testid="stAlert"] p {color:#f7f4ff!important;}
+.stApp [data-testid="stDataFrame"],.stApp [data-testid="stDataEditor"] {color:#f6f4ff!important;}
+.stApp [data-testid="stDateInput"] input,.stApp [data-testid="stTextInput"] input,.stApp textarea {background:#34395e!important;color:#fff!important;border:1px solid #7b78a8!important;}
+.stApp button,.stApp a[data-testid="stLinkButton"] {background:#39365f!important;color:#fff!important;border:1px solid #8377b4!important;}
+.stApp button *, .stApp a[data-testid="stLinkButton"] * {color:inherit!important;}
+.stApp button:disabled,.stApp button:disabled * {color:#d0cce2!important;opacity:.85!important;}
+.stApp button:hover {background:#52467e!important;border-color:#b49df9!important;}
+/* Month grid: preserve all seven columns, reduce row height without hiding overflowed events */
+.cal-grid {display:grid!important;grid-template-columns:repeat(7,minmax(0,1fr))!important;gap:5px!important;width:100%!important;}
+.cal-week {background:#35365e!important;color:#f3efff!important;padding:7px 2px!important;border:1px solid #55527e!important;border-radius:8px!important;font-size:13px!important;}
+.cal-day {min-height:68px!important;height:auto!important;padding:6px!important;background:#292d4f!important;border:1px solid #545679!important;border-radius:9px!important;overflow:hidden!important;}
+.cal-num {font-size:13px!important;color:#fff!important;margin-bottom:3px!important;}
+.cal-other {opacity:.52!important;}
+.cal-today {outline:2px solid #c0a4ff!important;outline-offset:-2px!important;}
+.cal-chip {font-size:10px!important;line-height:1.3!important;padding:3px 4px!important;margin:2px 0!important;}
+.cal-task {background:#5b422f!important;color:#ffe2ad!important;border-left:3px solid #f3ad4b!important;}
+.cal-meeting {background:#284969!important;color:#d4eeff!important;border-left:3px solid #75bafa!important;}
+.cal-task-soon {background:#6a4a2e!important;color:#ffe9b8!important;border-left:3px solid #ffbc5e!important;}
+.cal-task-overdue {background:#693847!important;color:#ffdce3!important;border-left:3px solid #ff819b!important;}
+.cal-more {color:#d6d0f0!important;}
+.st-key-cal_prev button,.st-key-cal_next button {background:#4b3b7a!important;color:#fff!important;border:1px solid #a58adf!important;min-height:40px!important;}
+.st-key-cal_prev button *, .st-key-cal_next button * {color:#fff!important;}
+@media(max-width:700px){.cal-grid{gap:2px!important}.cal-day{min-height:52px!important;padding:3px!important}.cal-week{font-size:11px!important;padding:5px 0!important}.cal-chip{font-size:9px!important}}
+
+/* Calendar's own month buttons */
+.stApp button[kind="secondary"],.stApp button[kind="tertiary"] {background:#2d2b51!important;color:#fff!important}
+</style>""",unsafe_allow_html=True)
+
+
+# ABLE UI v4: scoped file attachment popover contrast fix; no uploader behavior changes.
+st.markdown("""<style>
+/* Streamlit popovers are portal-rendered, so style only the one containing a file uploader. */
+[data-testid="stPopoverBody"]:has([data-testid="stFileUploader"]) {
+  width:min(430px,calc(100vw - 24px))!important;
+  min-width:0!important;
+  max-width:calc(100vw - 24px)!important;
+  background:#292d4d!important;
+  border:1px solid #7771ae!important;
+  border-radius:16px!important;
+  padding:12px!important;
+  overflow-x:hidden!important;
+  box-shadow:0 16px 44px rgba(0,0,0,.30)!important;
+}
+[data-testid="stPopoverBody"]:has([data-testid="stFileUploader"]) p,
+[data-testid="stPopoverBody"]:has([data-testid="stFileUploader"]) label,
+[data-testid="stPopoverBody"]:has([data-testid="stFileUploader"]) span,
+[data-testid="stPopoverBody"]:has([data-testid="stFileUploader"]) small {
+  color:#f3f0ff!important;
+  opacity:1!important;
+}
+[data-testid="stPopoverBody"]:has([data-testid="stFileUploader"]) [data-testid="stFileUploaderDropzone"] {
+  background:#34395d!important;
+  border:1px dashed #9185c7!important;
+  border-radius:12px!important;
+  padding:10px!important;
+  min-height:64px!important;
+}
+[data-testid="stPopoverBody"]:has([data-testid="stFileUploader"]) [data-testid="stFileUploaderDropzone"] button {
+  background:#514484!important;
+  color:#fff!important;
+  border:1px solid #a798e1!important;
+}
+/* Uploaded filename row: avoid white-on-white and prevent filename overflow. */
+[data-testid="stPopoverBody"]:has([data-testid="stFileUploader"]) [data-testid="stFileUploaderFile"] {
+  background:#373a61!important;
+  color:#fff!important;
+  border:1px solid #66628f!important;
+  border-radius:10px!important;
+  min-width:0!important;
+}
+[data-testid="stPopoverBody"]:has([data-testid="stFileUploader"]) [data-testid="stFileUploaderFile"] * {
+  color:#f7f5ff!important;
+  opacity:1!important;
+}
+[data-testid="stPopoverBody"]:has([data-testid="stFileUploader"]) [data-testid="stFileUploaderFile"] button {
+  background:#49456e!important;
+  color:#fff!important;
+}
+[data-testid="stPopoverBody"]:has([data-testid="stFileUploader"]) [data-testid="stCaptionContainer"] p {
+  color:#a9f2c9!important;
+  font-size:.85rem!important;
+  overflow-wrap:anywhere!important;
+}
+[data-testid="stPopoverBody"]:has([data-testid="stFileUploader"]) [data-testid="stFileUploaderDropzoneInstructions"] {
+  min-width:0!important;
+}
+</style>""",unsafe_allow_html=True)
+
+
+# ABLE v6 — all-tab text contrast and Markdown list visibility (presentation only)
+st.markdown(r"""<style>
+/* Standard Markdown, including ordered/unordered lists and nested text. */
+.stApp [data-testid="stMarkdownContainer"] {color:#F3F2FF!important;}
+.stApp [data-testid="stMarkdownContainer"] p,
+.stApp [data-testid="stMarkdownContainer"] li,
+.stApp [data-testid="stMarkdownContainer"] li p,
+.stApp [data-testid="stMarkdownContainer"] ol,
+.stApp [data-testid="stMarkdownContainer"] ul,
+.stApp [data-testid="stMarkdownContainer"] blockquote,
+.stApp [data-testid="stMarkdownContainer"] strong,
+.stApp [data-testid="stMarkdownContainer"] em {color:#F3F2FF!important;opacity:1!important;}
+.stApp [data-testid="stMarkdownContainer"] li::marker {color:#C6AEFF!important;}
+.stApp [data-testid="stMarkdownContainer"] h1,
+.stApp [data-testid="stMarkdownContainer"] h2,
+.stApp [data-testid="stMarkdownContainer"] h3,
+.stApp [data-testid="stMarkdownContainer"] h4 {color:#FFFFFF!important;opacity:1!important;}
+.stApp [data-testid="stMarkdownContainer"] a {color:#C9B7FF!important;text-decoration-color:#9F8CE2!important;}
+.stApp [data-testid="stMarkdownContainer"] code {background:#353454!important;color:#F5EFFF!important;}
+.stApp [data-testid="stMarkdownContainer"] blockquote {border-left:3px solid #9D85E0!important;background:#292A49!important;padding:.5rem .85rem!important;}
+.stApp [data-testid="stMarkdownContainer"] table {background:#262946!important;color:#F6F3FF!important;}
+.stApp [data-testid="stMarkdownContainer"] th {background:#39375D!important;color:#FFFFFF!important;}
+.stApp [data-testid="stMarkdownContainer"] td {color:#F4F0FF!important;border-color:#565477!important;}
+/* Preserve intended muted captions but keep them readable. */
+.stApp [data-testid="stCaptionContainer"] p {color:#D0CDE6!important;opacity:1!important;}
+.stApp [data-testid="stWidgetLabel"] p,
+.stApp [data-testid="stWidgetLabel"] span {color:#F6F3FF!important;opacity:1!important;}
+/* Expanders and tabs, including text in their panels. */
+.stApp [data-testid="stExpander"] summary,
+.stApp [data-testid="stExpander"] summary span,
+.stApp [data-testid="stTabs"] button,
+.stApp [data-testid="stTabs"] button p {color:#F5F1FF!important;opacity:1!important;}
+/* Notices: contrast against existing dark notice backgrounds. */
+.stApp [data-testid="stAlert"] p,
+.stApp [data-testid="stAlert"] li {color:#F5F2FF!important;opacity:1!important;}
+/* Avoid styling calendar event badges, which have their own category colors. */
+.cal-chip,.cal-chip * {opacity:1!important;}
+</style>""",unsafe_allow_html=True)
+
+
+# ABLE UI v9: email draft preview and expander/read-only text contrast.
+# Keep widget logic and Gmail approval flow unchanged.
+st.markdown(r"""<style>
+/* Expanders: header and content use a consistent dark palette. */
+.stApp [data-testid="stExpander"] > details,
+.stApp [data-testid="stExpander"] details {
+  background:#292D4D!important;
+  border:1px solid #6F699F!important;
+  border-radius:12px!important;
+}
+.stApp [data-testid="stExpander"] summary,
+.stApp [data-testid="stExpander"] summary * {
+  background:#34375D!important;
+  color:#F6F3FF!important;
+  -webkit-text-fill-color:#F6F3FF!important;
+  opacity:1!important;
+}
+.stApp [data-testid="stExpander"] [data-testid="stMarkdownContainer"],
+.stApp [data-testid="stExpander"] [data-testid="stMarkdownContainer"] :is(p,li,ul,ol,strong,em,h1,h2,h3,h4),
+.stApp [data-testid="stExpander"] [data-testid="stText"],
+.stApp [data-testid="stExpander"] [data-testid="stText"] *,
+.stApp [data-testid="stExpander"] pre,
+.stApp [data-testid="stExpander"] pre code {
+  color:#F5F3FF!important;
+  -webkit-text-fill-color:#F5F3FF!important;
+  opacity:1!important;
+}
+/* Prevent previous CSS from making plain-text blocks nearly invisible. */
+.stApp [data-testid="stText"],
+.stApp [data-testid="stText"] *,
+.stApp [data-testid="stCode"],
+.stApp [data-testid="stCode"] * {
+  color:#F4F1FF!important;
+  opacity:1!important;
+}
+/* Editable email body: legible both while typing and when disabled. */
+.stApp [data-testid="stTextArea"] textarea,
+.stApp [data-testid="stTextInput"] input {
+  background:#303455!important;
+  color:#FFFFFF!important;
+  -webkit-text-fill-color:#FFFFFF!important;
+  caret-color:#FFFFFF!important;
+}
+.stApp [data-testid="stTextArea"] textarea::placeholder,
+.stApp [data-testid="stTextInput"] input::placeholder {
+  color:#C6C5E3!important;
+  -webkit-text-fill-color:#C6C5E3!important;
+}
+/* Explicitly protect uploaded-file chips and their filenames from white-card conflicts. */
+.stApp [data-testid="stFileUploaderFile"],
+.stApp [data-testid="stFileUploaderFile"] > div {
+  background:#34395B!important;
+  color:#F7F5FF!important;
+}
+.stApp [data-testid="stFileUploaderFile"] :is(span,small,p,div),
+.stApp [data-testid="stFileUploaderFile"] [data-testid="stFileUploaderFileName"] {
+  color:#F7F5FF!important;
+  -webkit-text-fill-color:#F7F5FF!important;
+  opacity:1!important;
+}
+</style>""", unsafe_allow_html=True)
