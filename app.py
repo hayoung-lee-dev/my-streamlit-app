@@ -793,15 +793,24 @@ def conflicts(events):
             except ValueError: continue
     return found
 
+def clean_time(value):
+    if value is None or pd.isna(value):
+        return ""
 
+    text = str(value).strip()
+
+    if text.lower() in ("null", "none", "nan", "nat", ""):
+        return ""
+
+    return text
 # ── 일정 관리 확장 함수: 승인 일정, 업무 마감일, CSV 복원 ──
 def normalize_event(raw):
     event = dict(raw)
     event["id"] = str(event.get("id") or uuid.uuid4().hex)
     event["title"] = str(event.get("title") or "").strip()
     event["date"] = str(event.get("date") or "").strip()[:10]
-    event["start"] = str(event.get("start") or "").strip()
-    event["end"] = str(event.get("end") or "").strip()
+    event["start"] = clean_time(event.get("start"))
+    event["end"] = clean_time(event.get("end")) 
     event["source"] = str(event.get("source") or "회의/직접 등록").strip()
     event["task_id"] = str(event.get("task_id") or "")
     if not event["title"]:
